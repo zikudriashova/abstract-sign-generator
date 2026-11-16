@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-single
+.DS_Store
+*.zip
+
+# локальное: готовые single-файлы (публикуются в GitHub Releases), архив прошлой версии и дизайн-исходники
+release/
+archive/
+docs/references/
+.claude/
