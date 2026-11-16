@@ -2,13 +2,14 @@ import { useFavorites } from '../store/useFavorites'
 import { useSign } from '../store/useSign'
 import { useUI } from '../store/useUI'
 import { exportSvg } from '../export/svg'
-import { CONFIGS } from '../geometry/configs'
+import { formCount, formName, isCustom } from '../geometry/configs'
 
 export function Toolbar() {
   const { undo, redo, randomize, update, past, future } = useSign()
   const build = useSign((s) => s.sign.view.build)
   const mode = useSign((s) => s.sign.view.mode)
   const config = useSign((s) => s.sign.config)
+  const names = useSign((s) => Array.from({ length: formCount(s.sign) }, (_, i) => formName(s.sign, i)).join('\n')).split('\n')
   const autoplay = useSign((s) => s.sign.anim.autoplay)
   const sheet = useUI((s) => s.sheet)
   const setSheet = useUI((s) => s.setSheet)
@@ -16,8 +17,13 @@ export function Toolbar() {
     <div className="toolbar">
       <button onClick={() => randomize()} title="R">Randomize</button>
       <span className="configs" role="group" aria-label="Configuration">
-        {CONFIGS.map((c, i) => (
-          <button key={i} className={i === config ? 'on' : ''} title={`${c.name} (key ${i + 1})`} onClick={() => useSign.getState().setConfig(i)}>
+        {names.map((name, i) => (
+          <button
+            key={i}
+            className={[i === config ? 'on' : '', isCustom(i) ? 'custom' : ''].join(' ')}
+            title={i < 9 ? `${name} (key ${i + 1})` : name}
+            onClick={() => useSign.getState().setConfig(i)}
+          >
             {i + 1}
           </button>
         ))}

@@ -1,4 +1,4 @@
-import type { Contour, Outline, P, PieceId, Seg } from '../types'
+import type { Contour, CustomForm, Outline, P, PieceId, Seg } from '../types'
 
 /**
  * Пять конфигураций знака из docs/references/sign-collection-fin.ai.
@@ -73,11 +73,33 @@ export const CONFIGS: SignConfig[] = [
   { name: '5 · Wedge', top: wedge },
 ]
 
-/** Контур детали конфигурации в локальных координатах, масштаб — N модулей на квадрант. */
-export function configOutline(config: number, id: PieceId, N: number): Outline {
-  const c = CONFIGS[Math.max(0, Math.min(CONFIGS.length - 1, config))]
+const scaleOutline = (o: Outline, N: number): Outline => {
   const s = (q: P): P => ({ x: q.x * N, y: q.y * N })
-  return (id === 'top' ? c.top() : bottom()).map((contour) =>
+  return o.map((contour) =>
     contour.map((g): Seg => (g.t === 'L' ? { t: 'L', a: s(g.a), b: s(g.b) } : { ...g, a: s(g.a), b: s(g.b), c: s(g.c), r: g.r * N })),
   )
 }
+
+/** Контур детали встроенной конфигурации в локальных координатах, масштаб — N модулей на квадрант. */
+export function configOutline(config: number, id: PieceId, N: number): Outline {
+  const c = CONFIGS[Math.max(0, Math.min(CONFIGS.length - 1, config))]
+  return scaleOutline(id === 'top' ? c.top() : bottom(), N)
+}
+
+// ---------- все формы знака: встроенные + загруженные ----------
+
+type WithForms = { customForms: CustomForm[] }
+
+export const formCount = (s: WithForms) => CONFIGS.length + s.customForms.length
+export const isCustom = (i: number) => i >= CONFIGS.length
+export const customOf = (s: WithForms, i: number): CustomForm | undefined => s.customForms[i - CONFIGS.length]
+export const formName = (s: WithForms, i: number) => (isCustom(i) ? `${i + 1} · ${customOf(s, i)?.name ?? '?'}` : CONFIGS[i].name)
+
+/** Контур детали любой формы (встроенной или загруженной), масштаб — N модулей на квадрант. */
+export function formOutline(s: WithForms, i: number, id: PieceId, N: number): Outline {
+  const c = isCustom(i) ? customOf(s, i) : undefined
+  return c ? scaleOutline(c[id], N) : configOutline(i, id, N)
+}
+
+/** Детали встроенной формы в единицах квадранта — основа, когда в ней заменяют одну деталь файлом. */
+export const configUnitForm = (i: number): Pick<CustomForm, 'top' | 'bottom'> => ({ top: configOutline(i, 'top', 1), bottom: configOutline(i, 'bottom', 1) })

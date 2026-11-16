@@ -1,7 +1,8 @@
 import { button, Leva, levaStore, useControls } from 'leva'
 import { useEffect } from 'react'
 import type { Paint, PieceId } from '../types'
-import { CONFIGS } from '../geometry/configs'
+import { formCount, formName } from '../geometry/configs'
+import { deleteCurrentForm, importFromSvg } from '../import/actions'
 import { GRID_SIZES } from '../geometry/grid'
 import { ANIM_LIMITS, PALETTES, SPIN_LIMIT, paintOf, spreadPalettes, withPaint } from '../model'
 import { useSign } from '../store/useSign'
@@ -197,13 +198,14 @@ function GridControls() {
   return null
 }
 
-const CONFIG_OPTIONS = Object.fromEntries(CONFIGS.map((c, i) => [c.name, i]))
-
 function SignControls() {
+  // список форм меняется при загрузке и удалении: пересобираем селект по именам
+  const names = useSign((s) => Array.from({ length: formCount(s.sign) }, (_, i) => formName(s.sign, i)).join('\n'))
+  const options = Object.fromEntries(names.split('\n').map((n, i) => [n, i]))
   useBound(
     'Sign',
     {
-      config: { options: CONFIG_OPTIONS, label: 'configuration' },
+      config: { options, label: 'form' },
       seed: { step: 1, label: 'seed' },
     },
     () => {
@@ -214,8 +216,14 @@ function SignControls() {
       if (key === 'config') return st().setConfig(Number(value))
       st().setSeed(Math.max(0, Math.floor(Number(value) || 0)) >>> 0)
     },
-    [],
-    { Randomize: button(() => st().randomize()) },
+    [names],
+    {
+      Randomize: button(() => st().randomize()),
+      'Import sign (SVG)': button(() => void importFromSvg('sign')),
+      'Replace top piece (SVG)': button(() => void importFromSvg('top')),
+      'Replace bottom piece (SVG)': button(() => void importFromSvg('bottom')),
+      'Delete imported form': button(() => deleteCurrentForm()),
+    },
   )
   return null
 }

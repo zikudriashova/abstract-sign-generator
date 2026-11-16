@@ -1,5 +1,6 @@
-import type { AnimSettings, Easing, EnvPreset, MaterialPreset, Paint, PieceState, SignState } from './types'
+import type { AnimSettings, Contour, CustomForm, Easing, EnvPreset, MaterialPreset, Outline, P, Paint, PieceState, Seg, SignState } from './types'
 import { CONFIGS } from './geometry/configs'
+import { MAX_CUSTOM_FORMS, MAX_SEGMENTS } from './import/limits'
 import { GRID_SIZES } from './geometry/grid'
 import { ANIM_LIMITS, DEFAULT_ANIM, DEFAULT_SPIN, DEFAULT_VIEW3D, SPIN_LIMIT, initialState } from './model'
 
@@ -42,6 +43,38 @@ function paint(raw: unknown, name: string): Paint {
   }
 }
 
+function point(v: unknown, name: string): P {
+  if (!isObj(v)) return fail(`${name}: expected a point`)
+  return { x: num(v.x, -4, 4, `${name}.x`), y: num(v.y, -4, 4, `${name}.y`) }
+}
+
+/** Контуры загруженной детали: только отрезки и дуги с конечными координатами в разумных пределах. */
+function outline(raw: unknown, name: string): Outline {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > 500) return fail(`${name}: expected 1–500 contours`)
+  let total = 0
+  const out = raw.map((c, i): Contour => {
+    if (!Array.isArray(c) || c.length < 2) return fail(`${name}[${i}]: expected a contour of 2+ segments`)
+    total += c.length
+    if (total > MAX_SEGMENTS) fail(`${name}: more than ${MAX_SEGMENTS} segments`)
+    return c.map((sg, j): Seg => {
+      const n = `${name}[${i}][${j}]`
+      if (!isObj(sg)) return fail(`${n}: expected a segment`)
+      if (sg.t === 'L') return { t: 'L', a: point(sg.a, `${n}.a`), b: point(sg.b, `${n}.b`) }
+      if (sg.t === 'A')
+        return { t: 'A', a: point(sg.a, `${n}.a`), b: point(sg.b, `${n}.b`), c: point(sg.c, `${n}.c`), r: num(sg.r, 1e-6, 8, `${n}.r`), ccw: bool(sg.ccw, `${n}.ccw`) }
+      return fail(`${n}.t: L or A`)
+    })
+  })
+  return out
+}
+
+function customForm(raw: unknown, name: string): CustomForm {
+  if (!isObj(raw)) return fail(`${name}: expected an object`)
+  const id = typeof raw.id === 'string' && /^[a-z0-9]{1,16}$/.test(raw.id) ? raw.id : fail(`${name}.id: expected a short id`)
+  const title = typeof raw.name === 'string' ? raw.name.slice(0, 60) : fail(`${name}.name: expected a string`)
+  return { id, name: title, top: outline(raw.top, `${name}.top`), bottom: outline(raw.bottom, `${name}.bottom`) }
+}
+
 function piece(raw: unknown, base: PieceState, name: string): PieceState {
   if (!isObj(raw)) return fail(`${name}: expected an object`)
   const r = isObj(raw.rounding) ? raw.rounding : fail(`${name}.rounding: expected an object`)
@@ -68,10 +101,16 @@ export function validateState(raw: unknown): SignState {
   const N = oneOf(raw.grid.N, GRID_SIZES, 'grid.N')
   const base = initialState(N)
 
+  const cf = raw.customForms
+  if (cf !== undefined && (!Array.isArray(cf) || cf.length > MAX_CUSTOM_FORMS)) fail(`customForms: expected up to ${MAX_CUSTOM_FORMS} forms`)
+  const customForms = Array.isArray(cf) ? cf.map((f, i) => customForm(f, `customForms[${i}]`)) : []
+  const count = CONFIGS.length + customForms.length
+
   const out: SignState = {
     ...base,
     seed: raw.seed === undefined ? base.seed : int(raw.seed, 0, 2 ** 32, 'seed'),
-    config: int(raw.config, 0, CONFIGS.length - 1, 'config'),
+    config: int(raw.config, 0, count - 1, 'config'),
+    customForms,
     gap: raw.gap === undefined ? 0 : num(raw.gap, -64, 64, 'gap'),
     top: piece(raw.top, base.top, 'top'),
     bottom: piece(raw.bottom, base.bottom, 'bottom'),
@@ -79,7 +118,7 @@ export function validateState(raw: unknown): SignState {
 
   if (isObj(raw.color)) {
     const fp = raw.color.formPaints
-    if (fp !== undefined && (!Array.isArray(fp) || fp.length !== CONFIGS.length)) fail(`color.formPaints: expected ${CONFIGS.length} entries`)
+    if (fp !== undefined && (!Array.isArray(fp) || fp.length !== count)) fail(`color.formPaints: expected ${count} entries`)
     out.color = {
       bg: color(raw.color.bg ?? base.color.bg, 'color.bg'),
       singleGradient: raw.color.singleGradient === undefined ? false : bool(raw.color.singleGradient, 'color.singleGradient'),
@@ -90,9 +129,9 @@ export function validateState(raw: unknown): SignState {
             if (!isObj(e)) return fail(`color.formPaints[${i}]: expected an object`)
             return { top: paint(e.top, `color.formPaints[${i}].top`), bottom: paint(e.bottom, `color.formPaints[${i}].bottom`) }
           })
-        : CONFIGS.map(() => ({ top: out.top.paint, bottom: out.bottom.paint })),
+        : Array.from({ length: count }, () => ({ top: out.top.paint, bottom: out.bottom.paint })),
     }
-  } else out.color = { ...base.color, formPaints: CONFIGS.map(() => ({ top: out.top.paint, bottom: out.bottom.paint })) }
+  } else out.color = { ...base.color, formPaints: Array.from({ length: count }, () => ({ top: out.top.paint, bottom: out.bottom.paint })) }
   if (isObj(raw.spin)) {
     const v = raw.spin
     out.spin = {

@@ -40,8 +40,9 @@ export const SPIN_LIMIT = 3
 export const ANIM_LIMITS = { duration: [150, 2000], interval: [0.5, 10] } as const
 
 /** Детерминированно выбирает другую конфигурацию по seed. */
-export function nextConfig(current: number, seed: number): number {
-  const others = CONFIGS.map((_, i) => i).filter((i) => i !== current)
+export function nextConfig(current: number, seed: number, count = CONFIGS.length): number {
+  const others = Array.from({ length: count }, (_, i) => i).filter((i) => i !== current)
+  if (!others.length) return current
   return createRng(hashSeed(seed, 'config')).pick(others)
 }
 
@@ -94,7 +95,7 @@ export function spreadPalettes(s: SignState): SignState {
   const list = fit.length ? fit : PALETTES
   return {
     ...s,
-    color: { ...s.color, perForm: true, formPaints: CONFIGS.map((_, i) => ({ top: list[i % list.length].top, bottom: list[i % list.length].bottom })) },
+    color: { ...s.color, perForm: true, formPaints: s.color.formPaints.map((_, i) => ({ top: list[i % list.length].top, bottom: list[i % list.length].bottom })) },
   }
 }
 
@@ -104,6 +105,7 @@ export function initialState(N: GridState['N'] = 12, palette = PALETTES[0]): Sig
     seed: 1,
     grid: { N },
     config: 0,
+    customForms: [],
     gap: 0,
     top: basePiece(palette.top),
     bottom: basePiece(palette.bottom),

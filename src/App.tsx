@@ -6,7 +6,7 @@ import { Favorites } from './ui/Favorites'
 import { Toast } from './ui/Toast'
 import { useSign } from './store/useSign'
 import { useUI } from './store/useUI'
-import { CONFIGS } from './geometry/configs'
+import { formCount } from './geometry/configs'
 
 /** Автоплей: новая генерация каждые interval секунд, пока не стоит пауза. */
 function useAutoplay() {
@@ -34,7 +34,7 @@ export default function App() {
         e.shiftKey ? redo() : undo()
       } else if (mod) return
       else if (key === 'r') randomize()
-      else if (/^[1-9]$/.test(key) && Number(key) <= CONFIGS.length) setConfig(Number(key) - 1)
+      else if (/^[1-9]$/.test(key) && Number(key) <= formCount(sign)) setConfig(Number(key) - 1)
       else if (key === ' ' && sign.anim.autoplay) {
         e.preventDefault()
         const ui = useUI.getState()

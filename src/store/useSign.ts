@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { GridState, SignState } from '../types'
-import { CONFIGS } from '../geometry/configs'
+import type { CustomForm, GridState, PieceId, SignState } from '../types'
+import { configUnitForm, customOf, formCount, isCustom } from '../geometry/configs'
 import { PALETTES, initialState, nextConfig, withPaint } from '../model'
 import { validateState } from '../validate'
 
@@ -23,9 +23,16 @@ interface Store {
   applyPalette(name: string): void
   /** заменить знак импортированным пресетом (вид 2D/3D сохраняется) */
   loadState(s: SignState): void
+  /** добавить загруженную из SVG форму и переключиться на неё */
+  addCustomForm(form: Omit<CustomForm, 'id'>): void
+  /** заменить одну деталь текущей формы; у встроенной формы создаётся загруженная копия */
+  replacePiece(id: PieceId, outline: CustomForm['top'], name: string): void
+  /** удалить текущую форму, если она загруженная */
+  removeCurrentForm(): void
 }
 
 const HISTORY_LIMIT = 200
+const newFormId = () => Math.random().toString(36).slice(2, 10)
 let lastKey = ''
 let lastAt = 0
 
@@ -75,28 +82,70 @@ export const useSign = create<Store>((set, get) => ({
   },
 
   setConfig(config) {
-    if (config < 0 || config >= CONFIGS.length) return
+    if (config < 0 || config >= formCount(get().sign)) return
     get().update((s) => (s.config === config ? s : { ...s, config }))
   },
   randomize() {
     get().update((s) => {
       const seed = (Math.random() * 2 ** 32) >>> 0
-      return { ...s, seed, config: nextConfig(s.config, seed) }
+      return { ...s, seed, config: nextConfig(s.config, seed, formCount(s)) }
     })
   },
   advanceForm() {
     const s = get().sign
     const seed = (Math.random() * 2 ** 32) >>> 0
-    set({ sign: { ...s, seed, config: nextConfig(s.config, seed) } })
+    set({ sign: { ...s, seed, config: nextConfig(s.config, seed, formCount(s)) } })
   },
   setSeed(seed) {
-    get().update((s) => ({ ...s, seed, config: nextConfig(s.config, seed) }), 'seed')
+    get().update((s) => ({ ...s, seed, config: nextConfig(s.config, seed, formCount(s)) }), 'seed')
   },
   setN(N) {
     get().update((s) => (s.grid.N === N ? s : { ...s, grid: { N } }))
   },
   loadState(next) {
     get().update((s) => ({ ...next, view: s.view }))
+  },
+  addCustomForm(form) {
+    get().update((s) => {
+      const config = formCount(s)
+      return {
+        ...s,
+        config,
+        customForms: [...s.customForms, { ...form, id: newFormId() }],
+        // у новой формы цвета — как у текущей, их можно сразу поменять
+        color: { ...s.color, formPaints: [...s.color.formPaints, s.color.formPaints[s.config]] },
+      }
+    })
+  },
+  replacePiece(id, outline, name) {
+    get().update((s) => {
+      if (isCustom(s.config)) {
+        const k = s.config - (formCount(s) - s.customForms.length)
+        // новый id: геометрия кэшируется по id формы
+        const customForms = s.customForms.map((f, i) => (i === k ? { ...f, [id]: outline, id: newFormId() } : f))
+        return { ...s, customForms }
+      }
+      const base = configUnitForm(s.config)
+      const form: CustomForm = { ...base, [id]: outline, name, id: newFormId() }
+      return {
+        ...s,
+        config: formCount(s),
+        customForms: [...s.customForms, form],
+        color: { ...s.color, formPaints: [...s.color.formPaints, s.color.formPaints[s.config]] },
+      }
+    })
+  },
+  removeCurrentForm() {
+    get().update((s) => {
+      if (!isCustom(s.config) || !customOf(s, s.config)) return s
+      const k = s.config - (formCount(s) - s.customForms.length)
+      return {
+        ...s,
+        config: Math.max(0, s.config - 1),
+        customForms: s.customForms.filter((_, i) => i !== k),
+        color: { ...s.color, formPaints: s.color.formPaints.filter((_, i) => i !== s.config) },
+      }
+    })
   },
   applyPalette(name) {
     const p = PALETTES.find((x) => x.name === name)

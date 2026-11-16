@@ -1,5 +1,5 @@
 import type { Outline, Paint, PieceId, SignState } from '../../types'
-import { CONFIGS } from '../../geometry/configs'
+import { formCount } from '../../geometry/configs'
 import { buildSign } from '../../geometry/sign'
 import { renderPaint } from '../../model'
 import { EASINGS, type Ring, lerpRings, matchRings, outlineToRings, ringsToOutline } from '../../anim/morph'
@@ -36,7 +36,7 @@ const IDS: PieceId[] = ['top', 'bottom']
  * форме, и по углу; если удаётся, подбирается и целое число оборотов нижней детали.
  */
 export function buildTimeline(s: SignState, fps: number): Timeline {
-  const n = CONFIGS.length
+  const n = formCount(s)
   const ease = EASINGS[s.anim.easing]
   const is3d = s.view.mode === '3d'
   const spinTop = is3d ? s.spin.top : 0
@@ -44,7 +44,7 @@ export function buildTimeline(s: SignState, fps: number): Timeline {
   const k = s.spin.formsPerTurn
   const bySpin = is3d && spinTop !== 0 && k > 0
 
-  const exact = CONFIGS.map((_, config) => buildSign({ ...s, config }))
+  const exact = Array.from({ length: n }, (_, config) => buildSign({ ...s, config }))
   const paintsOf = (config: number): Pieces<Paint> => ({ top: renderPaint(s, 'top', config), bottom: renderPaint(s, 'bottom', config) })
   const pairCache = new Map<string, Pieces<[Ring, Ring][]>>()
   const pairs = (from: number, to: number) => {

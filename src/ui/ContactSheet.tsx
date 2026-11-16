@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CONFIGS } from '../geometry/configs'
+import { formCount, formName } from '../geometry/configs'
 import { signToSvg } from '../render2d/svg'
 import { useSign } from '../store/useSign'
 import { useUI } from '../store/useUI'
@@ -9,13 +9,18 @@ export function ContactSheet() {
   const sign = useSign((s) => s.sign)
   const setSheet = useUI((s) => s.setSheet)
   const items = useMemo(
-    () => CONFIGS.map((c, i) => ({ name: c.name, i, svg: signToSvg({ ...sign, config: i }, { build: false, bg: true, idPrefix: `s${i}-` }) })),
+    () =>
+      Array.from({ length: formCount(sign) }, (_, i) => ({
+        name: formName(sign, i),
+        i,
+        svg: signToSvg({ ...sign, config: i }, { build: false, bg: true, idPrefix: `s${i}-` }),
+      })),
     [sign],
   )
   return (
     <div className="sheet">
       <div className="sheet-head">
-        <span>All configurations — click one to switch</span>
+        <span>All forms — click one to switch</span>
         <button onClick={() => setSheet(false)}>Close</button>
       </div>
       <div className="sheet-grid">

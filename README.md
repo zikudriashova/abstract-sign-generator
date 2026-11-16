@@ -22,6 +22,18 @@ npm run build:single  # one self-contained HTML in release/
 - **2D / 3D** switches the view. **Construction** shows outlines, axes and the module grid.
 - **★** saves the current sign to favorites. `⌘/Ctrl+Z` undo, `⇧⌘Z` redo. The last sign is restored on the next launch.
 
+## Importing forms from SVG
+
+Panel folder **Sign**:
+
+- **Import sign (SVG)** — a whole sign becomes a new form (6, 7, …) next to the five built-in ones. The artboard (`viewBox`) is the sign: its centre is O, shapes in the top-right quarter become the top piece, shapes in the bottom-left quarter the bottom piece; the quadrant is half of the shorter artboard side. If a quarter is empty, that piece is kept from the current form.
+- **Replace top / bottom piece (SVG)** — the file holds one piece; it is fitted into the quadrant by its bounding box (for the bottom piece, the top-right corner of the box goes to O, as the piece sits in the sign). On a built-in form this creates an imported copy; built-in forms never change.
+- **Delete imported form** — removes the current form if it was imported.
+
+Imported forms work everywhere: Randomize, autoplay, morph, colours per form, 3D and spin, all exports, presets and favourites. Toolbar buttons of imported forms have a dashed border.
+
+What is read: filled `path`, `rect` (incl. rounded corners), `circle`, `ellipse`, `polygon`, `polyline`, with `transform` and `fill-rule` (holes in compound paths). Circles and circular curves become true arcs; free-form Bézier curves are split into short straight segments (≈ 1/700 of the quadrant). Stroke-only shapes, text, images and `<use>` are skipped with a warning — outline strokes and text before exporting. Colours in the file are ignored. Edges within 1% of the axes or the quadrant border are snapped. The file is never inserted into the page: only geometry is read. Limits: 3 MB per file, 6000 segments per piece, 24 imported forms.
+
 ## Shape-change animation
 
 Panel folder **Animation**:

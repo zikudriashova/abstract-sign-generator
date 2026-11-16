@@ -88,12 +88,22 @@ export interface SpinSettings {
   formsPerTurn: 0 | 1 | 2 | 4
 }
 
+/** Форма, загруженная из SVG: контуры деталей в локальных координатах квадранта, квадрант = 1. */
+export interface CustomForm {
+  id: string
+  name: string
+  top: Outline
+  bottom: Outline
+}
+
 export interface SignState {
   version: 2
   seed: number
   grid: GridState
-  /** номер конфигурации знака (0..CONFIGS.length-1) */
+  /** номер формы знака: сначала встроенные CONFIGS, затем загруженные customForms */
   config: number
+  /** формы, загруженные из SVG; идут после встроенных */
+  customForms: CustomForm[]
   gap: number
   top: PieceState
   bottom: PieceState
