@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- фавикон — знак (конфигурация 1). Отдельными файлами: Safari не берёт фавиконы из data-URI.
-         В single-файле scripts/singlefile.mjs встраивает их обратно, там внешних файлов быть не может. -->
-    <link rel="icon" href="%BASE_URL%favicon.ico" sizes="32x32" />
-    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%apple-touch-icon.png" />
+    <!-- фавикон — знак (конфигурация 1). Только растровые файлы: Safari не берёт data-URI и
+         ненадёжно работает с SVG-фавиконами. Суффикс версии в имени — потому что Safari кэширует
+         иконки по адресу файла и игнорирует ?v=. В single-файле scripts/singlefile.mjs встраивает их. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32-v3.png" />
+    <link rel="icon" type="image/x-icon" sizes="16x16 32x32" href="%BASE_URL%favicon-v3.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%apple-touch-icon-v3.png" />
     <title>Abstract Sign Generator</title>
   </head>
   <body>
