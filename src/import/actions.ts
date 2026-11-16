@@ -1,5 +1,5 @@
 import type { PieceId } from '../types'
-import { formOutline, isCustom } from '../geometry/configs'
+import { customCount, formName, formOutline, isCustom } from '../geometry/configs'
 import { MAX_CUSTOM_FORMS } from './limits'
 import { importSvg, type ImportTarget } from './svgImport'
 import { useSign } from '../store/useSign'
@@ -25,8 +25,8 @@ const baseName = (f: File) => f.name.replace(/\.svg$/i, '').trim().slice(0, 40) 
  */
 export async function importFromSvg(target: ImportTarget) {
   const st = useSign.getState()
-  if (target === 'sign' || !isCustom(st.sign.config)) {
-    if (st.sign.customForms.length >= MAX_CUSTOM_FORMS) return notify(`Up to ${MAX_CUSTOM_FORMS} imported forms — delete one first`, true)
+  if (target === 'sign' || !isCustom(st.sign, st.sign.config)) {
+    if (customCount(st.sign) >= MAX_CUSTOM_FORMS) return notify(`Up to ${MAX_CUSTOM_FORMS} imported forms — delete one first`, true)
   }
   const file = await pickFile()
   if (!file) return
@@ -46,7 +46,13 @@ export async function importFromSvg(target: ImportTarget) {
 
 export function deleteCurrentForm() {
   const s = useSign.getState().sign
-  if (!isCustom(s.config)) return notify('Built-in forms cannot be deleted — only imported ones')
-  useSign.getState().removeCurrentForm()
-  notify('Imported form deleted')
+  const name = formName(s, s.config)
+  if (!useSign.getState().removeCurrentForm()) return notify('The last form cannot be deleted')
+  const builtin = !isCustom(s, s.config)
+  notify(builtin ? `Deleted ${name}. Built-in forms come back with “Restore built-in forms” (or ⌘Z)` : `Deleted ${name} (⌘Z to undo)`)
+}
+
+export function restoreBuiltinForms() {
+  const n = useSign.getState().restoreBuiltins()
+  notify(n ? `Restored ${n} built-in form${n > 1 ? 's' : ''}` : 'All built-in forms are already there')
 }

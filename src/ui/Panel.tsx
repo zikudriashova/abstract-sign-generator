@@ -2,7 +2,7 @@ import { button, Leva, levaStore, useControls } from 'leva'
 import { useEffect } from 'react'
 import type { Paint, PieceId } from '../types'
 import { formCount, formName } from '../geometry/configs'
-import { deleteCurrentForm, importFromSvg } from '../import/actions'
+import { deleteCurrentForm, importFromSvg, restoreBuiltinForms } from '../import/actions'
 import { GRID_SIZES } from '../geometry/grid'
 import { ANIM_LIMITS, PALETTES, SPIN_LIMIT, paintOf, spreadPalettes, withPaint } from '../model'
 import { useSign } from '../store/useSign'
@@ -222,7 +222,8 @@ function SignControls() {
       'Import sign (SVG)': button(() => void importFromSvg('sign')),
       'Replace top piece (SVG)': button(() => void importFromSvg('top')),
       'Replace bottom piece (SVG)': button(() => void importFromSvg('bottom')),
-      'Delete imported form': button(() => deleteCurrentForm()),
+      'Delete this form': button(() => deleteCurrentForm()),
+      'Restore built-in forms': button(() => restoreBuiltinForms()),
     },
   )
   return null

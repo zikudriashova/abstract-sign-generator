@@ -9,7 +9,7 @@ export function Toolbar() {
   const build = useSign((s) => s.sign.view.build)
   const mode = useSign((s) => s.sign.view.mode)
   const config = useSign((s) => s.sign.config)
-  const names = useSign((s) => Array.from({ length: formCount(s.sign) }, (_, i) => formName(s.sign, i)).join('\n')).split('\n')
+  const names = useSign((s) => Array.from({ length: formCount(s.sign) }, (_, i) => `${isCustom(s.sign, i) ? '*' : ''}${formName(s.sign, i)}`).join('\n')).split('\n')
   const autoplay = useSign((s) => s.sign.anim.autoplay)
   const sheet = useUI((s) => s.sheet)
   const setSheet = useUI((s) => s.setSheet)
@@ -17,16 +17,20 @@ export function Toolbar() {
     <div className="toolbar">
       <button onClick={() => randomize()} title="R">Randomize</button>
       <span className="configs" role="group" aria-label="Configuration">
-        {names.map((name, i) => (
+        {names.map((raw, i) => {
+          const custom = raw.startsWith('*')
+          const name = custom ? raw.slice(1) : raw
+          return (
           <button
             key={i}
-            className={[i === config ? 'on' : '', isCustom(i) ? 'custom' : ''].join(' ')}
+            className={[i === config ? 'on' : '', custom ? 'custom' : ''].join(' ')}
             title={i < 9 ? `${name} (key ${i + 1})` : name}
             onClick={() => useSign.getState().setConfig(i)}
           >
             {i + 1}
           </button>
-        ))}
+          )
+        })}
       </span>
       <button
         className={autoplay ? 'on' : ''}

@@ -1,4 +1,4 @@
-import type { Contour, CustomForm, Outline, P, PieceId, Seg } from '../types'
+import type { Contour, CustomForm, FormEntry, Outline, P, PieceId, Seg } from '../types'
 
 /**
  * Пять конфигураций знака из docs/references/sign-collection-fin.ai.
@@ -66,11 +66,11 @@ export interface SignConfig {
 const bottom = (): Outline => angle(STROKE)
 
 export const CONFIGS: SignConfig[] = [
-  { name: '1 · L with inner curve', top: () => angleRounded(STROKE, INNER_R) },
-  { name: '2 · Checker squares', top: checker },
-  { name: '3 · Notched square', top: notched },
-  { name: '4 · Drop', top: drop },
-  { name: '5 · Wedge', top: wedge },
+  { name: 'L with inner curve', top: () => angleRounded(STROKE, INNER_R) },
+  { name: 'Checker squares', top: checker },
+  { name: 'Notched square', top: notched },
+  { name: 'Drop', top: drop },
+  { name: 'Wedge', top: wedge },
 ]
 
 const scaleOutline = (o: Outline, N: number): Outline => {
@@ -86,20 +86,34 @@ export function configOutline(config: number, id: PieceId, N: number): Outline {
   return scaleOutline(id === 'top' ? c.top() : bottom(), N)
 }
 
-// ---------- все формы знака: встроенные + загруженные ----------
+// ---------- все формы знака: список forms в состоянии ----------
 
-type WithForms = { customForms: CustomForm[] }
+type WithForms = { forms: FormEntry[] }
 
-export const formCount = (s: WithForms) => CONFIGS.length + s.customForms.length
-export const isCustom = (i: number) => i >= CONFIGS.length
-export const customOf = (s: WithForms, i: number): CustomForm | undefined => s.customForms[i - CONFIGS.length]
-export const formName = (s: WithForms, i: number) => (isCustom(i) ? `${i + 1} · ${customOf(s, i)?.name ?? '?'}` : CONFIGS[i].name)
+/** Стартовый список: пять встроенных форм по порядку. */
+export const DEFAULT_FORMS: FormEntry[] = CONFIGS.map((_, index) => ({ kind: 'builtin', index }))
 
-/** Контур детали любой формы (встроенной или загруженной), масштаб — N модулей на квадрант. */
-export function formOutline(s: WithForms, i: number, id: PieceId, N: number): Outline {
-  const c = isCustom(i) ? customOf(s, i) : undefined
-  return c ? scaleOutline(c[id], N) : configOutline(i, id, N)
+export const formCount = (s: WithForms) => s.forms.length
+const entry = (s: WithForms, i: number): FormEntry => s.forms[Math.max(0, Math.min(s.forms.length - 1, i))]
+export const isCustom = (s: WithForms, i: number) => entry(s, i)?.kind === 'custom'
+/** Номер в названии — позиция в списке, поэтому после удаления формы нумерация сдвигается. */
+export const formName = (s: WithForms, i: number) => {
+  const e = entry(s, i)
+  return `${i + 1} · ${e.kind === 'builtin' ? CONFIGS[e.index].name : e.name}`
+}
+/** Ключ формы для кэша геометрии: встроенные — по номеру в CONFIGS, загруженные — по id. */
+export const formKey = (s: WithForms, i: number) => {
+  const e = entry(s, i)
+  return e.kind === 'builtin' ? `b${e.index}` : `c:${e.id}`
 }
 
-/** Детали встроенной формы в единицах квадранта — основа, когда в ней заменяют одну деталь файлом. */
-export const configUnitForm = (i: number): Pick<CustomForm, 'top' | 'bottom'> => ({ top: configOutline(i, 'top', 1), bottom: configOutline(i, 'bottom', 1) })
+/** Контур детали любой формы, масштаб — N модулей на квадрант. */
+export function formOutline(s: WithForms, i: number, id: PieceId, N: number): Outline {
+  const e = entry(s, i)
+  return e.kind === 'builtin' ? configOutline(e.index, id, N) : scaleOutline(e[id], N)
+}
+
+/** Детали формы в единицах квадранта — основа, когда в форме заменяют одну деталь файлом. */
+export const unitForm = (s: WithForms, i: number): Pick<CustomForm, 'top' | 'bottom'> => ({ top: formOutline(s, i, 'top', 1), bottom: formOutline(s, i, 'bottom', 1) })
+
+export const customCount = (s: WithForms) => s.forms.filter((f) => f.kind === 'custom').length

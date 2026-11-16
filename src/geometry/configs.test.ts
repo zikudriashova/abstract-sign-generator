@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { CONFIGS, STROKE, configOutline } from './configs'
+import { CONFIGS, DEFAULT_FORMS, STROKE, configOutline } from './configs'
 import { buildPiece, buildSign } from './sign'
 import { outlineArea, outlineBBox, contourArea } from './outline'
 import { outlineToPathD } from './serialize'
@@ -74,10 +74,10 @@ describe('пять конфигураций из sign-collection-fin.ai', () => 
   test('скругления по-прежнему применяются к контурам конфигураций', () => {
     const r = { rounding: { convex: 1, concave: 0, origin: 2 } }
     for (let i = 0; i < CONFIGS.length; i++) {
-      const plain = outlineArea(buildPiece({ customForms: [] }, i, 'top', { rounding: { convex: 0, concave: 0, origin: 0 } }, 12))
-      const round = outlineArea(buildPiece({ customForms: [] }, i, 'top', r, 12))
+      const plain = outlineArea(buildPiece({ forms: DEFAULT_FORMS }, i, 'top', { rounding: { convex: 0, concave: 0, origin: 0 } }, 12))
+      const round = outlineArea(buildPiece({ forms: DEFAULT_FORMS }, i, 'top', r, 12))
       expect(round).toBeLessThan(plain) // выпуклые скругления снимают материал
-      closed(buildPiece({ customForms: [] }, i, 'top', r, 12))
+      closed(buildPiece({ forms: DEFAULT_FORMS }, i, 'top', r, 12))
     }
   })
 })

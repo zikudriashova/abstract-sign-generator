@@ -28,7 +28,8 @@ Panel folder **Sign**:
 
 - **Import sign (SVG)** — a whole sign becomes a new form (6, 7, …) next to the five built-in ones. The artboard (`viewBox`) is the sign: its centre is O, shapes in the top-right quarter become the top piece, shapes in the bottom-left quarter the bottom piece; the quadrant is half of the shorter artboard side. If a quarter is empty, that piece is kept from the current form.
 - **Replace top / bottom piece (SVG)** — the file holds one piece; it is fitted into the quadrant by its bounding box (for the bottom piece, the top-right corner of the box goes to O, as the piece sits in the sign). On a built-in form this creates an imported copy; built-in forms never change.
-- **Delete imported form** — removes the current form if it was imported.
+- **Delete this form** — removes the current form, built-in or imported (the last remaining form cannot be deleted; ⌘Z undoes). Numbers in form names follow their position in the list.
+- **Restore built-in forms** — brings deleted built-in forms back to the start of the list.
 
 Imported forms work everywhere: Randomize, autoplay, morph, colours per form, 3D and spin, all exports, presets and favourites. Toolbar buttons of imported forms have a dashed border.
 

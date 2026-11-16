@@ -1,5 +1,5 @@
 import type { AnimSettings, GridState, Paint, PieceId, PieceState, Rounding, SignState, SpinSettings, View3D } from './types'
-import { CONFIGS } from './geometry/configs'
+import { CONFIGS, DEFAULT_FORMS } from './geometry/configs'
 import { createRng, hashSeed } from './geometry/rng'
 
 export const solid = (color: string): Paint => ({ type: 'solid', angle: 0, stops: [{ color, at: 0 }, { color, at: 1 }] })
@@ -105,7 +105,7 @@ export function initialState(N: GridState['N'] = 12, palette = PALETTES[0]): Sig
     seed: 1,
     grid: { N },
     config: 0,
-    customForms: [],
+    forms: DEFAULT_FORMS,
     gap: 0,
     top: basePiece(palette.top),
     bottom: basePiece(palette.bottom),

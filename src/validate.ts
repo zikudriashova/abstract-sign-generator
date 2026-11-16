@@ -1,5 +1,5 @@
-import type { AnimSettings, Contour, CustomForm, Easing, EnvPreset, MaterialPreset, Outline, P, Paint, PieceState, Seg, SignState } from './types'
-import { CONFIGS } from './geometry/configs'
+import type { AnimSettings, Contour, CustomForm, Easing, FormEntry, EnvPreset, MaterialPreset, Outline, P, Paint, PieceState, Seg, SignState } from './types'
+import { CONFIGS, DEFAULT_FORMS } from './geometry/configs'
 import { MAX_CUSTOM_FORMS, MAX_SEGMENTS } from './import/limits'
 import { GRID_SIZES } from './geometry/grid'
 import { ANIM_LIMITS, DEFAULT_ANIM, DEFAULT_SPIN, DEFAULT_VIEW3D, SPIN_LIMIT, initialState } from './model'
@@ -101,16 +101,36 @@ export function validateState(raw: unknown): SignState {
   const N = oneOf(raw.grid.N, GRID_SIZES, 'grid.N')
   const base = initialState(N)
 
-  const cf = raw.customForms
-  if (cf !== undefined && (!Array.isArray(cf) || cf.length > MAX_CUSTOM_FORMS)) fail(`customForms: expected up to ${MAX_CUSTOM_FORMS} forms`)
-  const customForms = Array.isArray(cf) ? cf.map((f, i) => customForm(f, `customForms[${i}]`)) : []
-  const count = CONFIGS.length + customForms.length
+  // список форм; старые пресеты хранили только загруженные формы (customForms) после пяти встроенных
+  let forms: FormEntry[]
+  if (raw.forms !== undefined) {
+    if (!Array.isArray(raw.forms) || raw.forms.length < 1 || raw.forms.length > CONFIGS.length + MAX_CUSTOM_FORMS)
+      fail(`forms: expected 1–${CONFIGS.length + MAX_CUSTOM_FORMS} forms`)
+    const seen = new Set<number>()
+    forms = (raw.forms as unknown[]).map((f, i): FormEntry => {
+      if (isObj(f) && f.kind === 'builtin') {
+        const index = int(f.index, 0, CONFIGS.length - 1, `forms[${i}].index`)
+        if (seen.has(index)) fail(`forms[${i}]: built-in form ${index + 1} is listed twice`)
+        seen.add(index)
+        return { kind: 'builtin', index }
+      }
+      if (isObj(f) && f.kind === 'custom') return { kind: 'custom', ...customForm(f, `forms[${i}]`) }
+      return fail(`forms[${i}].kind: builtin or custom`)
+    })
+    if (forms.filter((f) => f.kind === 'custom').length > MAX_CUSTOM_FORMS) fail(`forms: up to ${MAX_CUSTOM_FORMS} imported forms`)
+  } else {
+    const cf = raw.customForms
+    if (cf !== undefined && (!Array.isArray(cf) || cf.length > MAX_CUSTOM_FORMS)) fail(`customForms: expected up to ${MAX_CUSTOM_FORMS} forms`)
+    const legacy = Array.isArray(cf) ? cf.map((f, i): FormEntry => ({ kind: 'custom', ...customForm(f, `customForms[${i}]`) })) : []
+    forms = [...DEFAULT_FORMS, ...legacy]
+  }
+  const count = forms.length
 
   const out: SignState = {
     ...base,
     seed: raw.seed === undefined ? base.seed : int(raw.seed, 0, 2 ** 32, 'seed'),
     config: int(raw.config, 0, count - 1, 'config'),
-    customForms,
+    forms,
     gap: raw.gap === undefined ? 0 : num(raw.gap, -64, 64, 'gap'),
     top: piece(raw.top, base.top, 'top'),
     bottom: piece(raw.bottom, base.bottom, 'bottom'),

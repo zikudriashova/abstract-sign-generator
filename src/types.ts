@@ -96,14 +96,17 @@ export interface CustomForm {
   bottom: Outline
 }
 
+/** Форма в списке знака: встроенная (ссылка на CONFIGS) или загруженная из SVG. */
+export type FormEntry = { kind: 'builtin'; index: number } | ({ kind: 'custom' } & CustomForm)
+
 export interface SignState {
   version: 2
   seed: number
   grid: GridState
-  /** номер формы знака: сначала встроенные CONFIGS, затем загруженные customForms */
+  /** номер текущей формы в списке forms */
   config: number
-  /** формы, загруженные из SVG; идут после встроенных */
-  customForms: CustomForm[]
+  /** формы знака по порядку: встроенные и загруженные; любую можно удалить, кроме последней */
+  forms: FormEntry[]
   gap: number
   top: PieceState
   bottom: PieceState

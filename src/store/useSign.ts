@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { CustomForm, GridState, PieceId, SignState } from '../types'
-import { configUnitForm, customOf, formCount, isCustom } from '../geometry/configs'
+import type { CustomForm, FormEntry, GridState, PieceId, SignState } from '../types'
+import { CONFIGS, formCount, unitForm } from '../geometry/configs'
 import { PALETTES, initialState, nextConfig, withPaint } from '../model'
 import { validateState } from '../validate'
 
@@ -12,7 +12,7 @@ interface Store {
   update(fn: (s: SignState) => SignState, coalesceKey?: string): void
   undo(): void
   redo(): void
-  /** выбрать конфигурацию знака (0..4) */
+  /** выбрать форму знака по номеру в списке */
   setConfig(config: number): void
   /** новая генерация: случайная конфигурация, отличная от текущей */
   randomize(): void
@@ -27,8 +27,10 @@ interface Store {
   addCustomForm(form: Omit<CustomForm, 'id'>): void
   /** заменить одну деталь текущей формы; у встроенной формы создаётся загруженная копия */
   replacePiece(id: PieceId, outline: CustomForm['top'], name: string): void
-  /** удалить текущую форму, если она загруженная */
-  removeCurrentForm(): void
+  /** удалить текущую форму (встроенную или загруженную); последнюю удалить нельзя. true — удалено */
+  removeCurrentForm(): boolean
+  /** вернуть удалённые встроенные формы в начало списка; возвращает, сколько вернулось */
+  restoreBuiltins(): number
 }
 
 const HISTORY_LIMIT = 200
@@ -106,46 +108,59 @@ export const useSign = create<Store>((set, get) => ({
     get().update((s) => ({ ...next, view: s.view }))
   },
   addCustomForm(form) {
-    get().update((s) => {
-      const config = formCount(s)
-      return {
-        ...s,
-        config,
-        customForms: [...s.customForms, { ...form, id: newFormId() }],
-        // у новой формы цвета — как у текущей, их можно сразу поменять
-        color: { ...s.color, formPaints: [...s.color.formPaints, s.color.formPaints[s.config]] },
-      }
-    })
+    get().update((s) => ({
+      ...s,
+      config: s.forms.length,
+      forms: [...s.forms, { kind: 'custom', ...form, id: newFormId() }],
+      // у новой формы цвета — как у текущей, их можно сразу поменять
+      color: { ...s.color, formPaints: [...s.color.formPaints, s.color.formPaints[s.config]] },
+    }))
   },
   replacePiece(id, outline, name) {
     get().update((s) => {
-      if (isCustom(s.config)) {
-        const k = s.config - (formCount(s) - s.customForms.length)
+      const cur = s.forms[s.config]
+      if (cur.kind === 'custom') {
         // новый id: геометрия кэшируется по id формы
-        const customForms = s.customForms.map((f, i) => (i === k ? { ...f, [id]: outline, id: newFormId() } : f))
-        return { ...s, customForms }
+        const forms = s.forms.map((f, i): FormEntry => (i === s.config ? { ...cur, [id]: outline, id: newFormId() } : f))
+        return { ...s, forms }
       }
-      const base = configUnitForm(s.config)
-      const form: CustomForm = { ...base, [id]: outline, name, id: newFormId() }
+      // встроенная форма не меняется: рядом появляется загруженная копия с новой деталью
+      const copy: FormEntry = { kind: 'custom', ...unitForm(s, s.config), [id]: outline, name, id: newFormId() }
       return {
         ...s,
-        config: formCount(s),
-        customForms: [...s.customForms, form],
+        config: s.forms.length,
+        forms: [...s.forms, copy],
         color: { ...s.color, formPaints: [...s.color.formPaints, s.color.formPaints[s.config]] },
       }
     })
   },
   removeCurrentForm() {
+    const before = get().sign.forms.length
     get().update((s) => {
-      if (!isCustom(s.config) || !customOf(s, s.config)) return s
-      const k = s.config - (formCount(s) - s.customForms.length)
+      if (s.forms.length <= 1) return s
+      const keep = (_: unknown, i: number) => i !== s.config
+      const forms = s.forms.filter(keep)
+      // на место удалённой встаёт следующая; если удалили последнюю в списке — предыдущая
+      return { ...s, forms, config: Math.min(s.config, forms.length - 1), color: { ...s.color, formPaints: s.color.formPaints.filter(keep) } }
+    })
+    return get().sign.forms.length < before
+  },
+  restoreBuiltins() {
+    const s = get().sign
+    const missing = CONFIGS.map((_, index) => index).filter((index) => !s.forms.some((f) => f.kind === 'builtin' && f.index === index))
+    if (!missing.length) return 0
+    get().update((st) => {
+      const back: FormEntry[] = missing.map((index) => ({ kind: 'builtin', index }))
+      // возвращённые встают в начало, по порядку; текущая форма остаётся выбранной
+      const paints = missing.map(() => ({ top: st.top.paint, bottom: st.bottom.paint }))
       return {
-        ...s,
-        config: Math.max(0, s.config - 1),
-        customForms: s.customForms.filter((_, i) => i !== k),
-        color: { ...s.color, formPaints: s.color.formPaints.filter((_, i) => i !== s.config) },
+        ...st,
+        forms: [...back, ...st.forms],
+        config: st.config + back.length,
+        color: { ...st.color, formPaints: [...paints, ...st.color.formPaints] },
       }
     })
+    return missing.length
   },
   applyPalette(name) {
     const p = PALETTES.find((x) => x.name === name)
