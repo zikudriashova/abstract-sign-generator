@@ -32,6 +32,7 @@ export const DEFAULT_ANIM: AnimSettings = {
   easing: 'easeInOut',
   autoplay: false,
   interval: 2,
+  order: 'sequence',
 }
 
 export const DEFAULT_SPIN: SpinSettings = { top: 0, bottom: 0, formsPerTurn: 2 }
@@ -44,6 +45,12 @@ export function nextConfig(current: number, seed: number, count = CONFIGS.length
   const others = Array.from({ length: count }, (_, i) => i).filter((i) => i !== current)
   if (!others.length) return current
   return createRng(hashSeed(seed, 'config')).pick(others)
+}
+
+/** Следующая форма для автоплея и вращения: по порядку (после последней — первая) или случайная другая. */
+export function stepConfig(current: number, seed: number, count: number, order: AnimSettings['order']): number {
+  if (order === 'random') return nextConfig(current, seed, count)
+  return count ? (current + 1) % count : current
 }
 
 export interface Palette {

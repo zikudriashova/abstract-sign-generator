@@ -158,3 +158,48 @@ describe('пресеты', () => {
     }
   })
 })
+
+describe('порядок смены форм', () => {
+  const setOrder = (order: 'sequence' | 'random') => st().update((s) => ({ ...s, anim: { ...s.anim, order } }))
+  test('по умолчанию — по порядку 1-2-3…, после последней снова первая; ← идёт назад', () => {
+    expect(st().sign.anim.order).toBe('sequence')
+    const seen = [st().sign.config]
+    for (let i = 0; i < CONFIGS.length; i++) {
+      st().next()
+      seen.push(st().sign.config)
+    }
+    expect(seen).toEqual([0, 1, 2, 3, 4, 0])
+    st().prev()
+    expect(st().sign.config).toBe(CONFIGS.length - 1)
+  })
+  test('вращение тоже идёт по порядку и не пишет в историю', () => {
+    st().setConfig(3)
+    const past = st().past.length
+    st().advanceForm()
+    expect(st().sign.config).toBe(4)
+    st().advanceForm()
+    expect(st().sign.config).toBe(0)
+    expect(st().past.length).toBe(past)
+  })
+  test('случайный порядок: каждый раз другая форма', () => {
+    setOrder('random')
+    for (let i = 0; i < 20; i++) {
+      const before = st().sign.config
+      i % 2 ? st().next() : st().advanceForm()
+      expect(st().sign.config).not.toBe(before)
+      consistent()
+    }
+  })
+  test('порядок сохраняется в пресете; в старом пресете его нет — по порядку', () => {
+    setOrder('random')
+    const order = (text: string) => {
+      const p = parsePreset(text)
+      if (!p.ok) throw new Error(p.error)
+      return p.state.anim.order
+    }
+    expect(order(serializePreset(st().sign))).toBe('random')
+    const old = JSON.parse(serializePreset(st().sign))
+    delete old.state.anim.order
+    expect(order(JSON.stringify(old))).toBe('sequence')
+  })
+})

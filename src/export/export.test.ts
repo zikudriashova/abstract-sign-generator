@@ -18,7 +18,7 @@ function variants(): SignState[] {
       seed: 100 + c,
       gap: (c % 4) - 1,
       top: { ...base.top, paint: PALETTES[c].top, rounding: { convex: c * 0.5, concave: 0, origin: c } },
-      anim: { mode: c % 2 ? 'cut' : 'morph', duration: 150 + c * 300, easing: (['linear', 'easeInOut', 'expoOut', 'backOut'] as const)[c % 4], autoplay: c > 2, interval: 0.5 + c },
+      anim: { mode: c % 2 ? 'cut' : 'morph', duration: 150 + c * 300, easing: (['linear', 'easeInOut', 'expoOut', 'backOut'] as const)[c % 4], autoplay: c > 2, interval: 0.5 + c, order: c % 2 ? 'random' : 'sequence' },
     })
   for (const N of [6, 8, 16] as const) out.push(initialState(N))
   return out

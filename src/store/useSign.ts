@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { CustomForm, FormEntry, GridState, PieceId, SignState } from '../types'
 import { CONFIGS, formCount, unitForm } from '../geometry/configs'
-import { PALETTES, initialState, nextConfig, withPaint } from '../model'
+import { PALETTES, initialState, nextConfig, stepConfig, withPaint } from '../model'
 import { validateState } from '../validate'
 
 interface Store {
@@ -16,7 +16,11 @@ interface Store {
   setConfig(config: number): void
   /** новая генерация: случайная конфигурация, отличная от текущей */
   randomize(): void
-  /** смена формы от вращения (не попадает в историю undo, чтобы её не засорять) */
+  /** следующая форма по настройке anim.order (автоплей, клавиша →) */
+  next(): void
+  /** предыдущая форма по списку (клавиша ←) */
+  prev(): void
+  /** смена формы от вращения по anim.order (не попадает в историю undo, чтобы её не засорять) */
   advanceForm(): void
   setSeed(seed: number): void
   setN(N: GridState['N']): void
@@ -93,10 +97,20 @@ export const useSign = create<Store>((set, get) => ({
       return { ...s, seed, config: nextConfig(s.config, seed, formCount(s)) }
     })
   },
+  next() {
+    get().update((s) => {
+      if (s.anim.order === 'sequence') return { ...s, config: stepConfig(s.config, s.seed, formCount(s), 'sequence') }
+      const seed = (Math.random() * 2 ** 32) >>> 0
+      return { ...s, seed, config: nextConfig(s.config, seed, formCount(s)) }
+    })
+  },
+  prev() {
+    get().update((s) => ({ ...s, config: (s.config - 1 + formCount(s)) % formCount(s) }))
+  },
   advanceForm() {
     const s = get().sign
-    const seed = (Math.random() * 2 ** 32) >>> 0
-    set({ sign: { ...s, seed, config: nextConfig(s.config, seed, formCount(s)) } })
+    const seed = s.anim.order === 'random' ? (Math.random() * 2 ** 32) >>> 0 : s.seed
+    set({ sign: { ...s, seed, config: stepConfig(s.config, seed, formCount(s), s.anim.order) } })
   },
   setSeed(seed) {
     get().update((s) => ({ ...s, seed, config: nextConfig(s.config, seed, formCount(s)) }), 'seed')

@@ -17,8 +17,9 @@ npm run build:single  # one self-contained HTML in release/
 ## Quick start
 
 - The sign is one of **five configurations** taken from `docs/references/sign-collection-fin.ai`. Pick one with the **1–5** buttons (or keys `1`–`5`), the *Sign → configuration* list, or the **Sheet** view.
-- **Randomize** (key `R`) switches to a random other configuration; the seed makes it reproducible.
-- **▶ Play** starts autoplay: a new configuration every *X* seconds (*Animation → every, s*). Click the canvas or press `Space` to pause and resume. In 3D, dragging to orbit does not count as a click.
+- **Randomize** (key `R`) jumps to a random other configuration; the seed makes it reproducible.
+- `→` / `←` step to the next / previous form. **Animation → next form** sets what "next" means for `→`, autoplay and spin: *in order 1-2-3* (the default; after the last form comes the first) or *random*.
+- **▶ Play** starts autoplay: the next form every *X* seconds (*Animation → every, s*). Click the canvas or press `Space` to pause and resume. In 3D, dragging to orbit does not count as a click.
 - **2D / 3D** switches the view. **Construction** shows outlines, axes and the module grid.
 - **★** saves the current sign to favorites. `⌘/Ctrl+Z` undo, `⇧⌘Z` redo. The last sign is restored on the next launch.
 

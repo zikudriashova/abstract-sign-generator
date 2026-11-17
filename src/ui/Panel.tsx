@@ -238,6 +238,7 @@ function AnimationControls() {
       mode: { options: { 'smooth morph': 'morph', 'hard cut': 'cut' }, label: 'shape change' },
       duration: { min: ANIM_LIMITS.duration[0], max: ANIM_LIMITS.duration[1], step: 10, label: 'duration, ms', render: isMorph },
       easing: { options: { linear: 'linear', 'ease-in-out': 'easeInOut', 'expo-out': 'expoOut', 'back-out': 'backOut' }, label: 'curve', render: isMorph },
+      order: { options: { 'in order 1-2-3': 'sequence', random: 'random' }, label: 'next form' },
       autoplay: { label: 'autoplay' },
       interval: { min: ANIM_LIMITS.interval[0], max: ANIM_LIMITS.interval[1], step: 0.1, label: 'every, s', render: isAuto },
     },

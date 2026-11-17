@@ -183,6 +183,8 @@ export function validateState(raw: unknown): SignState {
       easing: oneOf(a.easing ?? d.easing, EASINGS, 'anim.easing'),
       autoplay: bool(a.autoplay ?? d.autoplay, 'anim.autoplay'),
       interval: num(a.interval ?? d.interval, ANIM_LIMITS.interval[0], ANIM_LIMITS.interval[1], 'anim.interval'),
+      // в старых пресетах поля нет — тогда по порядку
+      order: oneOf(a.order ?? d.order, ['sequence', 'random'] as const, 'anim.order'),
     }
   }
   // вид (2D/3D, построение) — настройка интерфейса, а не знака: остаётся по умолчанию

@@ -8,14 +8,14 @@ import { useSign } from './store/useSign'
 import { useUI } from './store/useUI'
 import { formCount } from './geometry/configs'
 
-/** Автоплей: новая генерация каждые interval секунд, пока не стоит пауза. */
+/** Автоплей: следующая форма (по порядку или случайно) каждые interval секунд, пока не стоит пауза. */
 function useAutoplay() {
   const autoplay = useSign((s) => s.sign.anim.autoplay)
   const interval = useSign((s) => s.sign.anim.interval)
   const paused = useUI((s) => s.paused)
   useEffect(() => {
     if (!autoplay || paused) return
-    const id = setInterval(() => useSign.getState().randomize(), interval * 1000)
+    const id = setInterval(() => useSign.getState().next(), interval * 1000)
     return () => clearInterval(id)
   }, [autoplay, interval, paused])
 }
@@ -27,13 +27,15 @@ export default function App() {
       const el = e.target as HTMLElement
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable) return
       const mod = e.metaKey || e.ctrlKey
-      const { undo, redo, randomize, setConfig, sign } = useSign.getState()
+      const { undo, redo, randomize, next, prev, setConfig, sign } = useSign.getState()
       const key = e.key.toLowerCase()
       if (mod && key === 'z') {
         e.preventDefault()
         e.shiftKey ? redo() : undo()
       } else if (mod) return
       else if (key === 'r') randomize()
+      else if (key === 'arrowright') next()
+      else if (key === 'arrowleft') prev()
       else if (/^[1-9]$/.test(key) && Number(key) <= formCount(sign)) setConfig(Number(key) - 1)
       else if (key === ' ' && sign.anim.autoplay) {
         e.preventDefault()
