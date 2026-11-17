@@ -213,8 +213,12 @@ type Cam = THREE.Camera
  * Покадровый рендер для видео. Кадр 16:9 любого размера: камера подгоняется так же,
  * как для PNG (знак кадрируется по высоте), затем каждый кадр морфинга фиксируется
  * в движке, ждём, пока React перестроит геометрию, и рендерим.
+ *
+ * Пока React перестраивает сцену, R3F возвращает камере пропорции экрана, поэтому
+ * параметры кадра (абсолютные значения, без накопления) применяются перед каждым рендером.
  */
 function videoApi(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: Cam, size: { width: number; height: number }) {
+  let apply: (() => void) | null = null
   let restore: (() => void) | null = null
   return {
     begin(width: number, height: number) {
@@ -226,16 +230,20 @@ function videoApi(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: Cam, size
           : camera instanceof THREE.OrthographicCamera
             ? { left: camera.left, right: camera.right, top: camera.top, bottom: camera.bottom, zoom: camera.zoom }
             : {}
-      if (camera instanceof THREE.PerspectiveCamera) {
-        camera.aspect = width / height
-        camera.zoom = camera.zoom / Math.min(1, screenAspect)
-      } else if (camera instanceof THREE.OrthographicCamera) {
-        Object.assign(camera, { left: -width / 2, right: width / 2, top: height / 2, bottom: -height / 2 })
-        camera.zoom = camera.zoom * (height / Math.min(size.width, size.height))
+      const target =
+        camera instanceof THREE.PerspectiveCamera
+          ? { aspect: width / height, zoom: camera.zoom / Math.min(1, screenAspect) }
+          : camera instanceof THREE.OrthographicCamera
+            ? { left: -width / 2, right: width / 2, top: height / 2, bottom: -height / 2, zoom: camera.zoom * (height / Math.min(size.width, size.height)) }
+            : {}
+      apply = () => {
+        Object.assign(camera, target)
+        ;(camera as THREE.PerspectiveCamera).updateProjectionMatrix?.()
+        if (gl.getPixelRatio() !== 1) gl.setPixelRatio(1)
+        const buf = gl.domElement
+        if (buf.width !== width || buf.height !== height) gl.setSize(width, height, false)
       }
-      ;(camera as THREE.PerspectiveCamera).updateProjectionMatrix?.()
-      gl.setPixelRatio(1)
-      gl.setSize(width, height, false)
+      apply()
       restore = () => {
         Object.assign(camera, saved)
         ;(camera as THREE.PerspectiveCamera).updateProjectionMatrix?.()
@@ -247,11 +255,13 @@ function videoApi(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: Cam, size
       engine.hold(f)
       // ждём, пока R3F закоммитит сцену с этим кадром (геометрия строится в рендере компонентов)
       for (let i = 0; i < 200 && capture3d.committed !== f; i++) await new Promise((r) => setTimeout(r, 0))
+      apply?.()
       gl.render(scene, camera)
       return gl.domElement
     },
     end() {
       engine.hold(null)
+      apply = null
       restore?.()
       restore = null
       gl.render(scene, camera)
